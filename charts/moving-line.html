@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Hoop Dreams Line | Moving Line</title>
+<script type="text/javascript" src="D3.js"></script>
+<link rel="stylesheet" href="styles.css" type="text/css">
+<style>
+  .hidden {
+    display: none;
+  }
+
+  .bold {
+    stroke-width: 3;
+  }
+
+  p {
+    display: inline;
+  }
+</style>
+
+<script type="text/javascript"> function drawLine(dataset) {
+  console.log("DATA", dataset);
+  const body = document.getElementById("bod")
+  const goButton = document.createElement("button")
+  goButton.setAttribute("id", "go-btn")
+  goButton.innerHTML = "Go"
+  body.appendChild(goButton)
+
+  const pauseButton = document.createElement("button")
+  pauseButton.setAttribute("id", "pause")
+  pauseButton.innerHTML = "Pause"
+  body.appendChild(pauseButton)
+
+  const hideDiv = document.createElement("div")
+  let hideTitle = document.createElement("p")
+  hideTitle.innerHTML = "Hide Player: "
+  hideDiv.appendChild(hideTitle)
+
+  const strokeDiv = document.createElement("div")
+  let strokeTitle = document.createElement("p")
+  strokeTitle.innerHTML = "Highlight Player: "
+  strokeDiv.appendChild(strokeTitle)
+
+  const playerNames = ["Jordan", "Harden", "LeBron", "Wilt", "Kobe"]
+  const colorArray = ["red", "blue", "green", "orange", "purple"]
+
+  const numPlayers = dataset.length
+
+  for (let i = 0; i < numPlayers; i++) {
+    let hideButton = document.createElement("button")
+    hideButton.setAttribute("id", "hide-" + i)
+    hideButton.setAttribute("class", "hide-btn")
+    hideButton.style.background = colorArray[i]
+    hideButton.innerHTML = playerNames[i]
+    hideDiv.appendChild(hideButton)
+
+    let strokeButton = document.createElement("button")
+    strokeButton.setAttribute("id", "stroke-" + i)
+    strokeButton.setAttribute("class", "stroke-btn")
+    strokeButton.style.background = colorArray[i]
+    strokeButton.innerHTML = playerNames[i]
+    strokeDiv.appendChild(strokeButton)
+  }
+  body.appendChild(hideDiv)
+  body.appendChild(strokeDiv)
+
+  // count will be used to push new numbers from the dataset to the line arrays
+  let count = 0
+  // pointDict will hold the arrays that are used to draw lines of the graph
+  const lineDict = {}
+  // set how many datapoints you want each line to display
+  const lineLength = 40;
+  // create an array for each player, each array is initialized with zeros so first datapoints will appear on the right side of graph istead of already at the end
+  for(let i = 0; i < dataset.length; i++) {
+    let temp = []
+    for (let j = 0; j < lineLength; j++) {
+      temp.push(dataset[i][j]["points"])
+    }
+    lineDict[i] = temp
+  }
+
+  const margin = {top: 50, right: 50, bottom: 50, left: 50};
+  const w = 1000 - margin.left - margin.right;
+  const h = 600 - margin.top - margin.bottom;
+
+  const xScale = d3.scaleLinear()
+    .domain([count, lineLength + count])
+    .range([0, w]);
+
+  const yScale = d3.scaleLinear()
+    .domain([0, 100])
+    .range([h, 0]);
+
+  const axisScale = d3.scaleLinear()
+    .domain([count + 1, lineLength + count])
+    .range([0, w]);
+
+  const xAxis = d3.axisBottom()
+    .scale(axisScale)
+
+  const yAxis = d3.axisLeft()
+    .scale(yScale)
+
+  const svg = d3.select("#bod")
+    .append("svg")
+    .attr("width", w + margin.left + margin.right)
+    .attr("height", h + margin.top + margin.bottom);
+
+  const  g = svg.append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+    .attr("fill", "black")
+
+  const line = d3.line()
+    .x((d, i) => xScale(i))
+    .y((d, i) => yScale(d));
+
+  g.append("defs").append("clipPath")
+      .attr("id", "clip")
+    .append("rect")
+      .attr("width", w - margin.right)
+      .attr("height", h);
+
+  g.append("g")
+      .attr("class", "axis y")
+      .attr("transform", "translate(" + 0 + ", 0)")
+      .call(yAxis);
+
+  const axis = g.append("g")
+      .attr("class", "axis x")
+      .attr("transform", "translate(0," + h + ")")
+      .call(axisScale.axis=xAxis);
+
+  d3.select("#go-btn").on("click", function() {
+    for(let i = 0; i < numPlayers; i++) {
+      g.append("g")
+          .attr("clip-path", "url(#clip)")
+        .append("path")
+          .datum(lineDict[i])
+          .attr("class", "line")
+          .attr("id", "line" + i)
+          .attr("fill", "none")
+          .attr("stroke", colorArray[i])
+        .transition()
+          .duration(250)
+          .ease(d3.easeLinear)
+          .on("start", function() {
+            tick(this, i, lineDict[i])
+          });
+
+      d3.selectAll(".hide-btn").on("click", function() {
+        let selection = d3.select(`#line`+this.id.slice(5))
+          console.log(selection._groups[0]);
+        if(!selection._groups[0][0].classList.contains("hidden")) {
+          selection.classed("hidden", true)
+        } else {
+          selection.classed("hidden", false)
+        }
+      })
+
+      d3.selectAll(".stroke-btn").on("click", function() {
+        let selection = d3.select(`#line`+this.id.slice(7))
+          console.log(selection._groups[0]);
+        if(!selection._groups[0][0].classList.contains("bold")) {
+          selection.classed("bold", true)
+        } else {
+          selection.classed("bold", false)
+        }
+      })
+    }
+  })
+
+  const tick = (element, index, data) => {
+    if(index == numPlayers - 1) {
+      count++
+      axisScale.domain([count + 1, lineLength + count + 1])
+    }
+    // Push a new data point onto the array until dataset is out of numbers
+    if(count < dataset[index].length) {
+      data.push(dataset[index][count]['points']);
+
+    } else {
+      data.push(0)
+    }
+    if (count == 0 || (count == 1 && index == numPlayers - 1)) {
+      axis.transition()
+            .duration(250)
+            .ease(d3.easeLinear)
+            .call(axisScale.axis);
+      d3.select(`#${element.id}`)
+          .attr("d", line)
+          // needed for smooth movment
+          .attr("transform", null);
+      // Slide line to the left.
+      d3.active(element)
+          .attr("transform", "translate(" + xScale(-1) + ",0)")
+          .transition()
+            .delay(1500)
+            .on("start", function() {
+              tick(element, index, data)
+            });
+          // Pop the old data point off the front of the array
+          data.shift();
+    } else {
+      axis.transition()
+            .duration(250)
+            .ease(d3.easeLinear)
+            .call(axisScale.axis);
+    // Redraw the line.
+    d3.select(`#${element.id}`)
+        .attr("d", line)
+        // needed for smooth movment
+        .attr("transform", null);
+    // Slide line to the left.
+    d3.active(element)
+        .attr("transform", "translate(" + xScale(-1) + ",0)")
+        .transition()
+
+          .on("start", function() {
+            tick(element, index, data)
+          });
+        // Pop the old data point off the front of the array
+        data.shift();
+      }
+  }
+}
+</script>
+<script type="text/javascript"> function convert(data) {
+  for(count in data) {
+    data[count].forEach(function(d) {
+      d["index"] = +d["index"]
+      d["dates"] = new Date(d["dates"]);
+      d["points"] = +d["points"];
+    })
+  }
+    return data
+    }
+</script>
+</head>
+<body>
+<div id="bod" class="">
+  <p>HELLO</p>
+</div>
+  <script>
+       Promise.all([d3.csv("../csv/points/jordan_points.csv"), d3.csv("../csv/points/harden_points.csv"),d3.csv("../csv/points/lebron_points.csv"),d3.csv("../csv/points/wilt_points.csv"),d3.csv("../csv/points/kobe_points.csv")]).then(convert).then(drawLine);
+  </script>
+
+</body>
+</html>

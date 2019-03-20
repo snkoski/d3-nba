@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Hoop Dreams Scatter</title>
+<script type="text/javascript" src="D3.js"></script>
+<link rel="stylesheet" href="style.css">
+<script type="text/javascript"> function drawScatter(data) {
+
+  for (let i = 0; i < data.length; i++) {
+    let checkArea = document.getElementById("checkArea");
+    let checkBox = document.createElement("input");
+    checkBox.setAttribute("type", "checkbox");
+    checkBox.setAttribute("id", "player" + i);
+    checkBox.setAttribute("class", "check");
+    checkBox.setAttribute("checked", true);
+    checkBox.setAttribute("value", data[i]["Player Name"]);
+    let text = document.createElement("span");
+    text.innerText = checkBox.value;
+    checkArea.appendChild(checkBox);
+    checkArea.appendChild(text);
+    checkArea.appendChild(document.createElement("br"));
+  }
+
+
+  let margin = 40;
+  let w = 1000;
+  let h = 700;
+  let xStat = "WS";
+  let yStat = "PER";
+  let hiddenData = [];
+  let key = function(d){
+    return d["Player Name"];
+  }
+  let currentDataLength = data.length;
+
+
+  let xScale = d3.scaleLinear()
+    .domain([d3.min(data, (d) => d[xStat] - .1), d3.max(data, (d) => d[xStat]) + 1.5])
+    .range([0 + margin, w - margin]);
+
+  let yScale = d3.scaleLinear()
+    .domain([d3.min(data, (d) => d[yStat] - .1), d3.max(data, (d) => d[yStat]) + 1.5])
+    .range([h - margin, margin]);
+
+  let xAxis = d3.axisBottom()
+    .scale(xScale);
+
+  let yAxis = d3.axisLeft()
+    .scale(yScale);
+
+  let svg = d3.select("#boddiv")
+    .append("svg")
+    .attr("width", w)
+    .attr("height", h);
+
+  svg.append("clipPath")
+    .attr("id", "chart-area")
+    .append("rect")
+    .attr("x", margin)
+    .attr("y", margin)
+    .attr("width", w - margin)
+    .attr("height", h - margin);
+
+  svg.append("g")
+    .attr("id", "points")
+    .attr("clip-path", "url(#chart-area)")
+    .selectAll("circle")
+    .data(data, key)
+    .enter()
+    .append("circle")
+      .attr("cx", (d) =>xScale(d[xStat]))
+      .attr("cy", (d) => yScale(d[yStat]))
+      .attr("r", 3);
+
+  svg.selectAll("text")
+    .data(data, key)
+    .enter()
+    .append("text")
+      .attr("class", "name")
+      .attr("x", (d) => xScale(d[xStat]))
+      .attr("y", (d) => yScale(d[yStat]))
+      .text((d) => d["Player Name"])
+      .attr("fill",  "black");
+
+  svg.append("g")
+    .attr("class", "x axis")
+    .attr("transform", "translate(0," + (h - margin) + ")")
+    .call(xAxis);
+
+  svg.append("g")
+    .attr("class", "y axis")
+    .attr("transform", `translate(${margin}, 0)`)
+    .call(yAxis);
+
+  let xSelect = d3.select("#xaxis").on("change", (d, i, el) => {
+    xStat = el[i].value;
+    let resultMap = data.map(a => a[xStat]);
+
+    if (xStat == "eFG%") {
+      xScale.domain([44.1 - .1, d3.max(resultMap, (d) => d) + 1.5]);
+    } else {
+      xScale.domain([d3.min(resultMap, (d) => d) - .1, d3.max(resultMap, (d) => d) + 1.5]);
+    }
+
+    svg.selectAll("circle")
+      .data(data, key)
+      .transition()
+      .duration(1000)
+      .attr("cx", (d) =>  {
+        if ((d[xStat]) == 0) {
+          return -500;
+        } else {
+          return xScale(d[xStat])
+        }
+      })
+      .attr("r", 3);
+
+    svg.selectAll("text")
+      .data(data, key)
+      .transition()
+      .duration(1000)
+      .attr("x", (d) =>  {
+        if ((d[xStat]) == 0) {
+          return -500;
+        } else {
+          return xScale(d[xStat])
+        }
+      });
+
+    svg.select(".x.axis")
+      .transition()
+      .duration(1000)
+      .call(xAxis);
+  })
+
+  let ySelect = d3.select("#yaxis").on("change", (d, i, el) => {
+    yStat = el[i].value;
+    let resultMap = data.map(x => x[yStat]);
+
+    if (yStat == "eFG%") {
+      yScale.domain([44.1 - .1, d3.max(resultMap, (d) => d) + 1.5]);
+    } else {
+      yScale.domain([d3.min(resultMap, (d) => d) - .1, d3.max(resultMap, (d) => d) + 1.5]);
+    }
+
+    svg.selectAll("circle")
+      .data(data, key)
+      .transition()
+      .duration(1000)
+      .attr("cy", (d) =>  {
+        if ((d[yStat]) == 0) {
+          return -500;
+        } else {
+          return yScale(d[yStat])
+        }
+      })
+      .attr("r", 3);
+
+    svg.selectAll("text")
+      .data(data, key)
+      .transition()
+      .duration(1000)
+      .attr("y", (d) =>  {
+        if ((d[yStat]) == 0) {
+          return -500;
+        } else {
+          return yScale(d[yStat])
+        }
+      });
+
+    svg.select(".y.axis")
+      .transition()
+      .duration(1000)
+      .call(yAxis);
+  })
+
+  d3.selectAll(".check").on("click", (d, i, el) => {
+    if (el[i].checked != true) {
+      let found = data.findIndex(x => x["Player Name"] === el[i].value);
+      hiddenData.push(data[found]);
+      data.splice(data.indexOf(data[found]), 1);
+    } else {
+      let found = hiddenData.findIndex(x => x["Player Name"] === el[i].value);
+      data.push(hiddenData[found]);
+      hiddenData.splice(hiddenData.indexOf(hiddenData[found]), 1);
+    }
+  })
+
+  d3.select("#select-btn").on("click", (d, i, el) => {
+    let newCircles = svg.selectAll("circle")
+      .data(data, key);
+
+    let circleGroup = svg.select("#points");
+
+    let newGroup = circleGroup.selectAll("circle")
+      .data(data, key);
+
+    let newText = svg.selectAll(".name")
+      .data(data, key);
+
+    if (data.length > currentDataLength) {
+      newGroup.enter()
+        .append("circle")
+        .attr("cx", w)
+        .attr("cy", (d) => yScale(d[yStat]))
+        .attr("r", 3)
+        .merge(newGroup)
+        .transition()
+        .duration(500)
+        .attr("cx", (d) => xScale(d[xStat]))
+        .attr("cy", (d) => yScale(d[yStat]))
+        .attr("r", 3);
+
+      newText.enter()
+        .append("text")
+        .attr("x", w)
+        .attr("y", (d) => yScale(d[yStat]))
+        .merge(newText)
+        .transition()
+        .duration(500)
+        .attr("x", (d) => xScale(d[xStat]))
+        .attr("y", (d) => yScale(d[yStat]))
+        .text((d) => d["Player Name"])
+        .attr("class", "name")
+
+      svg.select(".x.axis")
+        .transition()
+        .duration(500)
+        .call(xAxis);
+
+      svg.select(".y.axis")
+        .transition()
+        .duration(500)
+        .call(yAxis);
+
+    } else if (data.length < currentDataLength) {
+
+      newGroup.exit()
+        .transition()
+        .duration(500)
+        .attr("cx", w)
+        .remove();
+
+      newText.exit()
+        .transition()
+        .duration(500)
+        .attr("x", w + 100)
+        .remove();
+    } else {
+      svg.selectAll("circle")
+        .data(data)
+        .transition()
+        .duration(500)
+        .attr("cx", (d) => xScale(d[xStat]))
+        .attr("cy", (d) => yScale(d[yStat]))
+
+      svg.selectAll("text")
+        .data(data)
+        .transition()
+        .duration(500)
+        .attr("x", (d) => xScale(d[xStat]))
+        .attr("y", (d) => yScale(d[yStat]))
+        .text((d) => d["Player Name"])
+
+
+
+    }
+    currentDataLength = data.length;
+  })
+
+  }
+</script>
+
+<script type="text/javascript"> function convert(data) {
+
+    data.forEach(function(d) {
+      d["AST"] = +d["AST"];
+      d["FG3%"] = +d["FG3%"];
+      d["FG%"] = +d["FG%"];
+      d["FT%"] = +d["FT%"];
+      d["G"] = +d["G"];
+      d["PER"] = +d["PER"];
+      d["PTS"] = +d["PTS"];
+      d["TRB"] = +d["TRB"];
+      d["WS"] = +d["WS"];
+      d["eFG%"] = +d["eFG%"];
+    })
+    console.log("CONVERT", data);
+    return data
+    }
+</script>
+
+</head>
+<body>
+  <!-- <button type="button" id="test-btn">TEST</button>
+
+<div id="check-box-container" style="display: inline;">
+
+</div>
+</div> -->
+<!-- <div id="bod" style="clear: both;"></div> -->
+<div id="boddiv"></div>
+<div id="side">
+  <h1>
+    HI
+  </h1>
+
+  <div style="float: left;">
+    <p>X-Axis</p>
+    <select id="xaxis" class="select-axis">
+      <option value="AST">AST</option>
+      <option value="FG3%">FG3%</option>
+      <option value="FG%">FG%</option>
+      <option value="FT%">FT%</option>
+      <option value="G">G</option>
+      <option value="PER">PER</option>
+      <option value="PTS">PTS</option>
+      <option value="TRB">TRB</option>
+      <option value="WS" selected>WS</option>
+      <option value="eFG%">eFG%</option>
+    </select>
+  </div>
+
+  <div style="float: left; margin-left: 20px;">
+    <p>Y-Axis</p>
+    <select id="yaxis" class="select-axis">
+      <option value="AST">AST</option>
+      <option value="FG3%">FG3%</option>
+      <option value="FG%">FG%</option>
+      <option value="FT%">FT%</option>
+      <option value="G">G</option>
+      <option value="PER" selected>PER</option>
+      <option value="PTS">PTS</option>
+      <option value="TRB">TRB</option>
+      <option value="WS">WS</option>
+      <option value="eFG%">eFG%</option>
+    </select>
+  </div>
+
+
+  <div class="container">
+    <h1>Select Players</h1>
+    <button type="button" name="select" id="select-btn">Select</button>
+  <div id="checkArea">
+
+  </div>
+  </div>
+</div>
+  <script>
+      d3.csv('../csv/top50.csv').then(convert).then(drawScatter)
+  </script>
+</body>
+</html>

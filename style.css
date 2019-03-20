@@ -1,0 +1,30 @@
+#boddiv {
+  float: left;
+}
+
+#side{
+  float: left;
+  color:  red;
+}
+
+#checkArea {
+  /* padding-top: 200px; */
+  /* display: inline; */
+  /* position: absolute; */
+  max-height: 300px;
+  overflow-y: scroll;
+}
+
+.container {
+  /* margin-top: 100px; */
+  /* padding-top: 100px; */
+  float: none;
+  display: block;
+  position: relative;
+  top: 75px;
+  z-index: 1;
+}
+
+.select-axis {
+  z-index: 2;
+}
