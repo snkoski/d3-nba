@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Hoop Dreams Line</title>
+<script type="text/javascript" src="d3.js"></script>
+<link rel="stylesheet" href="styles.css" type="text/css">
+<style media="screen">
+  body .dark {
+    background-color: black;
+  }
+
+  .red line {
+    stroke: red;
+  }
+
+  .red path {
+    stroke: red;
+  }
+
+  .red text {
+    fill: red;
+  }
+</style>
+
+<script type="text/javascript"> function drawScatter(dataset) {
+
+  let w = 1100;
+  let h = 650;
+  let padding = 40
+  let player = 0
+  let currentDataLength = 0
+  let startArr = []
+  let playerAvg = 0
+  // array that will hold player averages and min & max of stats
+  let fgpAvg = []
+  let ptsAvg = []
+  let fgpMinMax = []
+  let ptsMinMax = []
+
+  // helper function to get min and max from 2d array
+  function getMinMax(arr, idx) {
+    let indexArr = arr.map((el) => el[idx])
+    return {
+      min: Math.min.apply(null, indexArr),
+      max: Math.max.apply(null, indexArr)
+    }
+  }
+
+  // helper function to get avg from 2d array
+  function getAvg(arr, idx) {
+    let indexArr = arr.map((el) => el[idx])
+    return indexArr.reduce(function(p, c) {
+      return p + c;
+    }) / indexArr.length;
+  }
+
+  // setting arrays with averages and min/max
+  for(let i = 0; i < dataset.length; i++) {
+    fgpAvg.push(getAvg(dataset[i], 0))
+    ptsAvg.push(getAvg(dataset[i], 1))
+    fgpMinMax.push(getMinMax(dataset[i], 0))
+    ptsMinMax.push(getMinMax(dataset[i], 1))
+  }
+
+  // function to toggle background from white to black
+  let toggleBG = (function() {
+    let bgColor = "#ffffff";
+    return function() {
+      bgColor = bgColor == "#ffffff" ? "#000000" : "#ffffff";
+      d3.select("svg").style("background-color", bgColor)
+      d3.select("body").style("background-color", bgColor)
+      d3.selectAll(".axis").attr("class", "red")
+    }
+  })();
+
+  // function to display wins or loses on button click
+  let filterWinLose = function(d, i) {
+    if(d[2] === result){
+      d3.select(this)
+        .transition()
+        .duration(3000)
+        .on("start",  () => {
+          d3.select(this)
+          .attr("r", 10)
+        })
+        .attr("r", 4)
+    } else {
+        d3.select(this)
+          .transition()
+          .duration(3000)
+          .attr("r", .25)
+      }
+  }
+
+  let xScale = d3.scaleLinear()
+    // .domain([fgpMinMax[player].min, fgpMinMax[player].max])
+    .domain([0, 1])
+    .range([padding, w - padding / 2]);
+
+  let yScale = d3.scaleLinear()
+    // .domain([ptsMinMax[player].min, ptsMinMax[player].max])
+    .domain([0, 70])
+    .range([h - padding, padding / 2]);
+
+  let xAxis = d3.axisBottom()
+    .scale(xScale)
+    .ticks(5)
+
+
+  let yAxis = d3.axisLeft()
+    .scale(yScale)
+    .ticks(5);
+
+  let svg = d3.select("body")
+    .append("svg")
+    .attr("width", w)
+    .attr("height", h)
+
+  let allCircles = svg.selectAll("circle")
+    .data(startArr)
+    .enter()
+    .append("circle")
+    .attr("cx", (d) => xScale(d[0]))
+    .attr("cy", (d) => yScale(d[1]))
+    .attr("r", 4)
+    .attr("fill", "rgb(0, 0, 0, 0.1)");
+
+  svg.append("g")
+    .attr("class", "x axis")
+    .attr("transform", "translate(0," + (h - padding) + ")")
+    // .attr("class", "red")
+    .call(xAxis);
+
+  svg.append("g")
+    .attr("class", "y axis")
+    .attr("transform", "translate(" + padding + ",0)")
+    // .attr("class", "red")
+    .call(yAxis);
+
+  d3.selectAll(".scatter-radio.stats")
+    .on("click", function() {
+
+      player = d3.select(this).node().value;
+      // yScale.domain([ptsMinMax[player].min, ptsMinMax[player].max])
+      // xScale.domain([fgpMinMax[player].min, fgpMinMax[player].max])
+      d3.selectAll(".scatter-radio.avg").nodes()[player].checked = true
+
+      let newGroup = svg.selectAll("circle")
+        .data(dataset[player])
+
+      if(dataset[player].length > currentDataLength) {
+        newGroup.enter()
+          .append("circle")
+            .attr("cx", w)
+            .attr("cy", (d) => yScale(d[1]))
+            .attr("r", 4)
+          .merge(newGroup)
+          .transition()
+          .duration(2500)
+            .attr("cx", (d) => xScale(d[0]))
+            .attr("cy", (d) => yScale(d[1]))
+            .attr("r", 4)
+
+      } else if(dataset[player].length < currentDataLength) {
+          newGroup.exit()
+            .transition()
+            .duration(2500)
+            .attr("cx", w)
+            .remove()
+
+          svg.selectAll("circle")
+            .data(dataset[player])
+            .transition()
+            .duration(2500)
+            .attr("cx", (d) => xScale(d[0]))
+            .attr("cy", (d) => yScale(d[1]))
+            .attr("r", 4)
+      }
+
+      // svg.select(".x.axis")
+      //   .transition()
+      //   .duration(500)
+      //   .call(xAxis)
+      //
+      // svg.select(".y.axis")
+      //   .transition()
+      //   .duration(500)
+      //   .call(yAxis)
+
+      currentDataLength = dataset[player].length
+
+      changeColor(player)
+    })
+
+    d3.selectAll(".WL").on("click", function() {
+      result = this.value
+      let allCircles = svg.selectAll("circle")
+      allCircles.each(filterWinLose)
+    })
+
+    d3.select(".bg-btn").on("click", function() {
+      return toggleBG()
+    })
+
+    d3.selectAll(".scatter-radio.avg").on("click", function() {
+      playerAvg = d3.select(this).node().value;
+      changeColor(playerAvg)
+    })
+
+    function changeColor(playerAvg) {
+      let allCircles = svg.selectAll("circle")
+
+      allCircles.filter((d) => d[0] <= fgpAvg[playerAvg] && d[1] >= ptsAvg[playerAvg])
+        .attr("fill", "rgb(255, 0, 255, 0.2)");
+
+      allCircles.filter((d) => d[0] <= fgpAvg[playerAvg] && d[1] < ptsAvg[playerAvg])
+        .attr("fill", "rgb(0, 0, 255, 0.2)");
+
+      allCircles.filter((d) => d[0] > fgpAvg[playerAvg] && d[1] >= ptsAvg[playerAvg])
+        .attr("fill", "rgb(255, 0, 0, 0.2)");
+
+      allCircles.filter((d) => d[0] > fgpAvg[playerAvg] && d[1] < ptsAvg[playerAvg])
+        .attr("fill", "rgb(255, 165, 0, 0.2)");
+    }
+
+}
+</script>
+
+  <script type="text/javascript"> function convert(data) {
+      let dataset = []
+      for(count in data) {
+        data[count].forEach(function(d) {
+          d["index"] = +d["index"];
+          d["dates"] = new Date(d["dates"]);
+          d["points"] = +d["points"];
+          d["fgp"] = +d["fgp"];
+          d["result"] = d["result"].slice(0, 1);
+        })
+      }
+      for(let i = 0; i < data.length; i++) {
+        innerSet = []
+        for(let j = 0; j < data[i].length; j++) {
+          innerSet.push([data[i][j]["fgp"], data[i][j]["points"], data[i][j]["result"]])
+        }
+        dataset.push(innerSet)
+      }
+      return dataset;
+      }
+  </script>
+</head>
+<body>
+  <div id="bod" class="moving">
+    <button class="bg-btn" type="button" name="background">Background</button>
+    <br>
+    <button class="win-btn WL" type="button" name="W" value="W"> See Wins</button>
+    <button class="lose-btn WL" type="button" name="L" value="L"> See Loses</button>
+    <p>Scatter Plot with Radio Buttons</p>
+    <p>Results
+      <input type="radio" class="scatter-radio stats" name="filterPreset" value="0"/> Jordan
+      <input type="radio" class="scatter-radio stats" name="filterPreset" value="1"/> Harden
+      <input type="radio" class="scatter-radio stats" name="filterPreset" value="2"/> Lebron
+    </p>
+    <p>Averages
+      <input type="radio" class="scatter-radio avg" name="avgColor" value="0"/> Jordan
+      <input type="radio" class="scatter-radio avg" name="avgColor" value="1"/> Harden
+      <input type="radio" class="scatter-radio avg" name="avgColor" value="2"/> Lebron
+    </p>
+  </div>
+  <script>
+       Promise.all([d3.csv("../csv/points/jordan_points_fgp.csv"), d3.csv("../csv/points/harden_points_fgp.csv"),d3.csv("../csv/points/lebron_points_fgp.csv")]).then(convert).then(drawScatter);
+  </script>
+
+</body>
+</html>
