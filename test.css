@@ -1,13 +1,30 @@
+body {
+    background-color: #f0f0f0;
+
+}
+
 .container {
     display: grid;
     grid-template-columns: 1fr;
+    padding: 20px;
+    grid-gap: 20px;
 }
 
 .plot {
     display: grid;
-    grid-template-columns: repeat(2, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-gap: 20px;
+    padding: 20px;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    background-color: #f9f9f9;
+
+}
+
+.info a h2 {
+    text-align: center;
 }
 
 img {
     width: 100%;
 }
+
