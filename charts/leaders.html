@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>Hoop Dreams Scatter</title>
 <script type="text/javascript" src="d3.js"></script>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="leaders.css">
 </head>
 <body>
     <header>
@@ -48,8 +48,6 @@
         </nav>
       </div>
     </header>
-    
-
   <script type="text/javascript"> function drawScatter(data) {
     const title = document.getElementsByClassName('title')[0]
     title.style.paddingLeft = "10px"
@@ -58,7 +56,6 @@
     const width = document.body.clientWidth;
     const top_n = 20;
     const height = window.innerHeight - (nav.clientHeight + title.clientHeight + margin.top + (top_n * 2));
-    // const height = 600;
     const tickDuration = 850;
     let year = data['startYear'];
     
