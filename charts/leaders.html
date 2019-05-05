@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Hoop Dreams Scatter</title>
+<script type="text/javascript" src="d3.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+      <div class="container">
+        <p class="logo"> <a href="https://shawnkoski.com/d3-nba/">Back</a></p>
+        <nav>
+            <ul>
+                <li class="linkey" id="pts">Points</li>
+                <li class="linkey" id="ast">Assists</li>
+                <li>Rebounds <span>&#x25BE;</span>
+                    <ul>
+                        <li class="linkey" id="trb">Total</li>
+                        <li class="linkey" id="drb">Defensive</li>
+                        <li class="linkey" id="orb">Offensive</li>
+                    </ul>
+                </li>
+                <li class="linkey" id="stl">Steals</li>
+                <li class="linkey" id="blk">Blocks</li>
+                <li>Shooting <span>&#x25BE;</span>
+                  <ul>
+                    <li class="linkey" id="fg">Field Goals</li>
+                    <li class="linkey" id="fga">FG Attempts</li>
+                    <li class="linkey" id="fg3">Threes</li>
+                    <li class="linkey" id="ft">Free Throws</li>
+                    <li class="linkey" id="fta">FT Attempts</li>
+                  </ul>
+                </li>
+                <li class="linkey" id="pf">Fouls</li>
+                <li class="linkey" id="tov">Turnovers</li>
+                <li class="linkey" id="g">Games</li>
+                <li class="linkey" id="mp">Minutes</li>
+                <li>Win Shares <span>&#x25BE;</span>
+                  <ul>
+                    <li class="linkey" id="ws">Total</li>
+                    <li class="linkey" id="ows">Offensive</li>
+                    <li class="linkey" id="dws">Defensive</li>
+                  </ul>
+                </li>
+                <li class="linkey" id="vorp">VORP</li>
+            </ul>
+        </nav>
+      </div>
+    </header>
+    
+
+  <script type="text/javascript"> function drawScatter(data) {
+    const title = document.getElementsByClassName('title')[0]
+    title.style.paddingLeft = "10px"
+    const nav = document.getElementsByTagName('nav')[0]
+    const margin = {top: 15, right: 10, bottom: 0, left: 10};
+    const width = document.body.clientWidth;
+    const top_n = 20;
+    const height = window.innerHeight - (nav.clientHeight + title.clientHeight + margin.top + (top_n * 2));
+    // const height = 600;
+    const tickDuration = 850;
+    let year = data['startYear'];
+    
+
+    let barPadding = (height - (margin.bottom + margin.top)) / (top_n * 5);
+  
+    let svg = d3.select("body")
+      .append("svg")
+      .attr("width", width)
+      .attr("height", height)
+
+    let yearSlice = data.filter(d => d.year == year && !isNaN(d.value))
+      .sort((a,b) => b.value - a.value)
+      .slice(0, top_n);
+  
+    yearSlice.forEach((d, i) => d.rank = i);
+  
+    let xScale = d3.scaleLinear()
+      .domain([0, d3.max(yearSlice, d => d.value)])
+      .range([margin.left, width - margin.right - 65]);
+  
+    let yScale = d3.scaleLinear()
+      .domain([top_n, 0])
+      .range([height - margin.bottom, margin.top]);
+  
+    let xAxis = d3.axisTop()
+      .scale(xScale)
+      .ticks(width > 500 ? 5 : 2)
+      .tickSize(-(height - margin.top - margin.bottom))
+      .tickFormat(d => d3.format(',')(d));
+  
+    svg.append("g")
+      .attr("class", "axis xAxis")
+      .attr("transform", `translate(0, ${margin.top})`)
+      .call(xAxis)
+        .selectAll(".tick line")
+        .classed("origin", d => d == 0);
+  
+    svg.selectAll("rect.bar")
+      .data(yearSlice, d => d.name)
+      .enter()
+      .append("rect")
+      .attr("class", "bar")
+      .attr("x", xScale(0) + 1)
+      .attr("y", d => yScale(d.rank) + 5)
+      .attr("width", d => xScale(d.value) - xScale(0) - 1)
+      .attr("height", yScale(1) - yScale(0) - barPadding)
+      .style("fill", (d) => d.color)
+  
+    svg.selectAll("text.label")
+      .data(yearSlice, d => d.name)
+      .enter()
+      .append("text")
+      .attr("class", "label")
+      .attr("x", d => xScale(d.value) - 8)
+      .attr("y", d => yScale(d.rank) + 5 + ((yScale(1) - yScale(0)) / 2) + 1)
+      .attr("text-anchor", "end")
+      .html(d => d.name)
+  
+    svg.selectAll("text.valueLabel")
+      .data(yearSlice, d => d.name)
+      .enter()
+      .append("text")
+      .attr("class", "valueLabel")
+      .attr("x", d => xScale(d.value) + 5)
+      .attr("y", d => yScale(d.rank) + 5 + ((yScale(1) - yScale(0)) / 2) + 1)
+      .text(d => d3.format(',.0f')(d.lastValue));
+
+    let yearText = svg.append("text")
+      .attr("class", "yearText")
+      .attr("x", width - margin.right)
+      .attr("y", height - 25)
+      .style("text-anchor", "end")
+      .html(~~year)
+
+    let caption = svg.append('text')
+      .attr("class", "caption")
+      .attr("x", width)
+      .attr("y", height - 5)
+      .style("text-anchor", "end")
+      .html("Source: Basketball-Reference")
+  
+    let ticker = d3.interval(e => {
+  
+      yearSlice = data.filter(d => d.year == year && !isNaN(d.value))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, top_n);
+  
+      yearSlice.forEach((d, i) => d.rank = i);
+  
+      xScale.domain([0, d3.max(yearSlice, d => d.value)]);
+  
+      svg.select(".xAxis")
+        .transition()
+        .duration(tickDuration)
+        .ease(d3.easeLinear)
+        .call(xAxis);
+  
+      let bars = svg.selectAll(".bar").data(yearSlice, d => d.name);
+
+      bars.enter()
+        .append("rect")
+        .attr("class", d => `bar ${d.name.replace(/\s/g,"_")}`)
+        .attr("x", xScale(0) + 1)
+        .attr("y", d => yScale(top_n + 1) + 5)
+        .attr("width", d => xScale(d.value) - xScale(0) - 1)
+        .attr("height", yScale(1) - yScale(0) - barPadding)
+        .style("fill", d => d.color)
+        .transition()
+          .duration(tickDuration)
+          .ease(d3.easeLinear)
+          .attr("y", d => yScale(d.rank) + 5)
+  
+  
+      bars
+        .transition()
+          .duration(tickDuration)
+          .ease(d3.easeLinear)
+          .attr("width", d => xScale(d.value) - xScale(0) - 1)
+          .attr("y", d => yScale(d.rank) + 5);
+  
+      bars
+        .exit()
+        .transition()
+          .duration(tickDuration)
+          .ease(d3.easeLinear)
+          .attr("width", d => xScale(d.value) - xScale(0) - 1)
+          .attr("y", yScale(top_n + 1) + 5)
+          .remove();
+  
+      let labels = svg.selectAll(".label").data(yearSlice, d => d.name);
+  
+      labels
+        .enter()
+        .append("text")
+        .attr("class", "label")
+        .attr("x", d => xScale(d.value) - 8)
+        .attr("y", d => yScale(top_n + 1) + 5 + ((yScale(1) - yScale(0)) / 2))
+        .attr("text-anchor", "end")
+        .html(d => d.name)
+        .transition()
+          .duration(tickDuration)
+          .ease(d3.easeLinear)
+          .attr("y", d => yScale(d.rank) + 5 + ((yScale(1) - yScale(0)) / 2) + 1);
+  
+      labels
+        .transition()
+          .duration(tickDuration)
+          .ease(d3.easeLinear)
+          .attr("x", d => xScale(d.value) - 8)
+          .attr("y", d => yScale(d.rank) + 5 + ((yScale(1) - yScale(0)) / 2) + 1);
+  
+      labels
+        .exit()
+        .transition()
+          .duration(tickDuration)
+          .ease(d3.easeLinear)
+          .attr("x", d => xScale(d.value) - 8)
+          .attr("y", d => yScale(top_n + 1) + 5)
+          .remove();
+  
+      let valueLabels = svg.selectAll(".valueLabel").data(yearSlice, d => d.name);
+  
+      valueLabels
+        .enter()
+        .append("text")
+        .attr("class", "valueLabel")
+        .attr("x", d => xScale(d.value) + 5)
+        .attr("y", d => yScale(top_n + 1) + 5)
+        .text(d => d3.format(',.0f')(d.value))
+        .transition()
+          .duration(tickDuration)
+          .ease(d3.easeLinear)
+          .attr("y", d => yScale(d.rank) + 5 + ((yScale(1) - yScale(0)) / 2) + 1)
+  
+      valueLabels
+        .transition()
+          .duration(tickDuration)
+          .ease(d3.easeLinear)
+          .attr("x", d => xScale(d.value) + 5)
+          .attr("y", d => yScale(d.rank) + 5 + ((yScale(1) - yScale(0)) / 2) + 1)
+          .tween("text", function(d) {
+            let i = d3.interpolateRound(d.lastValue, d.value);
+            return function(t) {
+              this.textContent = d3.format(',')(i(t));
+            };
+          });
+  
+      valueLabels
+        .exit()
+        .transition()
+          .duration(tickDuration)
+          .ease(d3.easeLinear)
+          .attr("x", d => xScale(d.value) + 5)
+          .attr("y", d => yScale(top_n + 1) + 5)
+          .remove()
+
+      yearText.html(~~year)
+    
+      if(year == 2019) ticker.stop();
+      year = d3.format('.1f')((+year) + 1);
+    }, tickDuration);
+  
+    stop = () => {
+       ticker.stop();
+  }
+    }
+  </script>
+  <script>
+      const titles = {"pts": "Points", "ast": "Assists", "trb": "Total Rebounds", "drb": "Defensive Rebounds", "orb": "Offensive Rebounds", "stl": "Steals", "blk": "Blocks", "fg": "Field Goals", "fga": "Field Goal Attempts", "fg3": "Three Point Fields Goals", "ft": "Free Throws", "fta": "Free Throw Attempts", "pf": "Personal Fouls", "tov": "Turnovers", "g": "Games Played", "mp": "Minutes Played", "ws": "Win Shares", "ows": "Offensive Win Shares", "dws": "Defensive Win Shares", "vorp": "Value Over Replacement Player"}
+      let body = document.getElementsByTagName('body')[0]
+      let links = document.getElementsByClassName('linkey')
+      let title = document.createElement("h1")
+      title.setAttribute("class", "title")
+      body.appendChild(title)
+      for (let link in links) {
+        links[link].onclick = function () {
+          let currentChart = document.getElementsByTagName('svg')[0]
+          if (currentChart) {
+            stop()
+            currentChart.parentNode.removeChild(currentChart)
+          }
+          let stat = links[link].id
+          console.log(stat)
+         title.innerHTML = `NBA All Time Leaders in ${titles[stat]}`
+         d3.csv(`../csv/leaders_data/${links[link].id}.csv`).then(convert).then(drawScatter)
+        }
+      }
+    </script>
+  
+  <script type="text/javascript"> function convert(data) {
+      data.forEach(function(d) {
+        d["value"] = +d["value"];
+        d["lastValue"] = +d["prevValue"];
+        d["rank"] = +d["rank"];
+        d["year"] = +d["year"];
+        d["color"] = d3.hsl(Math.random()*360,0.75,0.75)
+      })
+      data['startYear'] = data[0].year
+      return data
+      }
+  </script>
+</body>
+</html>
